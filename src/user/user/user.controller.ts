@@ -1,15 +1,21 @@
 import {
+  Body,
   Controller,
   Get,
   Header,
   HttpCode,
+  HttpException,
   Inject,
   Param,
+  ParseIntPipe,
   Post,
   Query,
   Redirect,
   Req,
   Res,
+  UseFilters,
+  UseInterceptors,
+  UsePipes,
 } from '@nestjs/common';
 import type { HttpRedirectResponse } from '@nestjs/common';
 import type { Response, Request } from 'express';
@@ -18,6 +24,14 @@ import { Connection } from '../connection/connection';
 import { MailService } from '../mail/mail.service';
 import { UserRepository } from '../user-repository/user-repository';
 import { MemberService } from '../member/member.service';
+import { User } from '@prisma/client';
+import { ValidationFilter } from 'src/validation/validation.filter';
+import {
+  LoginUserRequest,
+  loginUserRequestValidation,
+} from 'src/model/login.model';
+import { ValidationPipe } from 'src/validation/validation.pipe';
+import { TimeInterceptor } from '../../time/time.interceptor';
 
 @Controller('/api/users')
 export class UserController {
@@ -34,17 +48,43 @@ export class UserController {
   // @Inject()
   // private service: UserService;
 
+  @Post('/login')
+  @UseFilters(ValidationFilter)
+  @UsePipes(new ValidationPipe(loginUserRequestValidation))
+  @Header('Content-Type', 'application/json')
+  @UseInterceptors(TimeInterceptor)
+  login(@Query('name') name: string, @Body() request: LoginUserRequest) {
+    return `Hello ${request.username}`;
+  }
+
   @Get('/connection')
   async getConnetion(): Promise<string> {
     this.mailService.send();
-    this.userRepository.save();
     this.emailService.send();
     console.info(this.memberService.getConnectionName());
     this.memberService.sendEmail();
     return this.connection.getName();
   }
 
+  @Get('/create')
+  async create(
+    @Query('first_name') firstName: string,
+    @Query('last_name') lastName: string,
+  ): Promise<User> {
+    if (!firstName) {
+      throw new HttpException(
+        {
+          code: 400,
+          errors: 'firstName is required',
+        },
+        400,
+      );
+    }
+    return await this.userRepository.save(firstName, lastName);
+  }
+
   @Get('/hello')
+  // @UseFilters(ValidationFilter)
   async sayHello(@Query('name') name: string): Promise<string> {
     return this.service.sayHello(name);
   }
@@ -92,7 +132,7 @@ export class UserController {
   }
 
   @Get('/:id')
-  getById(@Param('id') id: string): string {
+  getById(@Param('id', ParseIntPipe) id: number): string {
     return `Get ${id}`;
   }
 
