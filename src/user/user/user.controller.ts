@@ -14,6 +14,7 @@ import {
   Req,
   Res,
   UseFilters,
+  UseGuards,
   UseInterceptors,
   UsePipes,
 } from '@nestjs/common';
@@ -24,7 +25,7 @@ import { Connection } from '../connection/connection';
 import { MailService } from '../mail/mail.service';
 import { UserRepository } from '../user-repository/user-repository';
 import { MemberService } from '../member/member.service';
-import { User } from '@prisma/client';
+import type { User } from '@prisma/client';
 import { ValidationFilter } from 'src/validation/validation.filter';
 import {
   LoginUserRequest,
@@ -32,6 +33,8 @@ import {
 } from 'src/model/login.model';
 import { ValidationPipe } from 'src/validation/validation.pipe';
 import { TimeInterceptor } from '../../time/time.interceptor';
+import { Auth } from 'src/auth/auth.decorator';
+import { RoleGuard } from 'src/role/role.guard';
 
 @Controller('/api/users')
 export class UserController {
@@ -47,6 +50,14 @@ export class UserController {
   // kalau pakai inject
   // @Inject()
   // private service: UserService;
+
+  @Get('/current')
+  @UseGuards(new RoleGuard(['admin', 'opertor']))
+  current(@Auth() user: User): Record<string, any> {
+    return {
+      data: `Hello ${user.first_name} ${user.last_name || ""}`,
+    };
+  }
 
   @Post('/login')
   @UseFilters(ValidationFilter)
