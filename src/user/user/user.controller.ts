@@ -35,7 +35,9 @@ import { ValidationPipe } from 'src/validation/validation.pipe';
 import { TimeInterceptor } from '../../time/time.interceptor';
 import { Auth } from 'src/auth/auth.decorator';
 import { RoleGuard } from 'src/role/role.guard';
+import { Roles } from 'src/role/roles.decorator';
 
+// @UseGuards(RoleGuard)
 @Controller('/api/users')
 export class UserController {
   constructor(
@@ -48,14 +50,14 @@ export class UserController {
   ) {}
 
   // kalau pakai inject
-  // @Inject()
+  // @Inject('nama')
   // private service: UserService;
 
   @Get('/current')
-  @UseGuards(new RoleGuard(['admin', 'opertor']))
+  @Roles(['admin', 'operator'])
   current(@Auth() user: User): Record<string, any> {
     return {
-      data: `Hello ${user.first_name} ${user.last_name || ""}`,
+      data: `Hello ${user.first_name} ${user.last_name || ''}`,
     };
   }
 
@@ -65,7 +67,9 @@ export class UserController {
   @Header('Content-Type', 'application/json')
   @UseInterceptors(TimeInterceptor)
   login(@Query('name') name: string, @Body() request: LoginUserRequest) {
-    return `Hello ${request.username}`;
+    return {
+      data: `Hello ${request.username}`,
+    };
   }
 
   @Get('/connection')
@@ -142,13 +146,13 @@ export class UserController {
     };
   }
 
-  @Get('/:id')
-  getById(@Param('id', ParseIntPipe) id: number): string {
-    return `Get ${id}`;
-  }
-
   @Get('/sample')
   get(): string {
     return 'GET';
+  }
+
+  @Get('/:id')
+  getById(@Param('id', ParseIntPipe) id: number): string {
+    return `Get ${id}`;
   }
 }
